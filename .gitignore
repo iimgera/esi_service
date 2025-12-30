@@ -1,0 +1,75 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Environment variables and sensitive data
+.env
+.env.production
+# PostgreSQL database files
+*.db
+*.sqlite3
+
+# Virtual environment
+venv/
+.venv/
+
+# Python egg files
+*.egg
+*.egg-info/
+dist/
+build/
+*.egg-info/
+
+# pytest cache
+.pytest_cache/
+
+# IDE and editor specific files
+.vscode/
+.idea/
+../.idea/
+*.swp
+
+# Logs and debug files
+*.log
+logs/
+
+# Docker related files
+docker-compose.override.yml
+docker-compose.yml
+*.env
+
+# MacOS specific files
+.DS_Store
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+
+# FastAPI compiled HTML files (optional)
+staticfiles/
+mediafiles/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+
+# Test output
+.tox/
+.nox/
+test-output/
+
+# MyPy cache
+.mypy_cache/
+dmypy.json
+dmypy.log
+mypy_cache/
+
+# Profiling data
+.prof
+
+# Pipenv files
+Pipfile.lock

@@ -1,0 +1,26 @@
+# For migrating the database
+alembic==1.13.3              # Database migrations
+
+fastapi==0.109.1
+uvicorn[standard]==0.21.1    # ASGI server for running FastAPI
+greenlet==3.1.1              # Required for running uvicorn with Gunicorn
+
+# Database dependencies
+sqlalchemy==1.4.41           # ORM for database interaction
+asyncpg==0.30.0              # Async PostgreSQL driver for SQLAlchemy
+psycopg2-binary==2.9.10       # PostgreSQL adapter for SQLAlchemy
+
+# Pydantic for config and schema validation (comes pre-installed with FastAPI)
+pydantic===2.10.6
+pydantic-settings==2.10.1    # For managing Pydantic settings
+
+# Environment management
+python-dotenv==1.0.0         # For loading environment variables from a .env file
+
+# Testing dependencies
+pytest==7.2.0                # Testing framework
+httpx==0.27.1                # HTTP client, useful for async test client with FastAPI
+
+requests==2.32.4             # For testing HTTP requests
+
+pytz==2024.2                 # For timezone support
