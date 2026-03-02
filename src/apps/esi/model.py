@@ -34,7 +34,7 @@ class EsiUser(Base, TimeStampedMixin, SoftDeleteMixin):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    esi_id = Column(String(255), unique=True, nullable=True)
+    esi_id = Column(String(255), unique=True, nullable=False)
     organization_tin = Column(String(255), nullable=True)
     organization_name = Column(String(255), nullable=True)
     position_name = Column(String(255), nullable=True)

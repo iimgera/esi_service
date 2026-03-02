@@ -1,3 +1,5 @@
+import logging
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 from datetime import date
 
@@ -5,19 +7,18 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.apps.esi.model import EsiUser
+from src.apps.esi.model import EsiUser, EsiToken
 from src.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class EsiService:
-    """Class-based ESI Service for API calls and database operations."""
-
     def __init__(self, db: AsyncSession):
         self.db = db
         self.timeout = 15.0
 
     async def get_auth_token(self, code: str, code_verifier: str) -> Optional[dict]:
-        """Exchange authorization code for ESI access token."""
         url = f"{settings.ESI_URL}/connect/token"
         data = {
             "grant_type": "authorization_code",
@@ -35,18 +36,14 @@ class EsiService:
                 response.raise_for_status()
                 return response.json()
             except httpx.HTTPStatusError as exc:
-                print(f"[ESI ERROR] Failed to get auth token: {exc.response.text}")
+                logger.error("Failed to get auth token: %s", exc.response.text)
             except httpx.RequestError as exc:
-                print(f"[ESI ERROR] Network problem while getting auth token: {exc}")
+                logger.error("Network error while getting auth token: %s", exc)
         return None
 
     async def get_user_info(self, access_token: str) -> Optional[dict]:
-        """Retrieve user information from ESI using access token."""
         url = f"{settings.ESI_URL}/connect/userinfo"
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/x-www-form-urlencoded",
-        }
+        headers = {"Authorization": f"Bearer {access_token}"}
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             try:
@@ -54,27 +51,14 @@ class EsiService:
                 response.raise_for_status()
                 return response.json()
             except httpx.HTTPStatusError as exc:
-                print(f"[ESI ERROR] Failed to get user info: {exc.response.text}")
+                logger.error("Failed to get user info: %s", exc.response.text)
             except httpx.RequestError as exc:
-                print(f"[ESI ERROR] Network problem while getting user info: {exc}")
+                logger.error("Network error while getting user info: %s", exc)
         return None
 
-    # --------------------
-    # DB Operations
-    # --------------------
     async def get_or_create_esi_user(self, user_info: dict) -> EsiUser:
-        """
-        Get or create an ESI user in the database.
-        Updates existing records only if fields have changed.
-        """
-        organization_tin = user_info.get("organization_tin")
         esi_id = user_info.get("sub")
-        pin = user_info.get("pin")
-        username = f"{esi_id}_{pin}" if pin else esi_id
-        if organization_tin:
-            username = f"{username}_{organization_tin}"
 
-        # Normalize birth_date if provided
         birth_date = user_info.get("birthdate")
         if isinstance(birth_date, str):
             try:
@@ -83,10 +67,10 @@ class EsiService:
                 birth_date = None
 
         defaults = {
-            "organization_tin": organization_tin,
+            "organization_tin": user_info.get("organization_tin"),
             "organization_name": user_info.get("organization_name"),
             "position_name": user_info.get("position_name"),
-            "pin": pin,
+            "pin": user_info.get("pin"),
             "citizenship": user_info.get("citizenship"),
             "family_name": user_info.get("family_name"),
             "given_name": user_info.get("given_name"),
@@ -98,7 +82,6 @@ class EsiService:
             "phone": user_info.get("phone_number"),
         }
 
-        # Try to find an existing EsiUser
         result = await self.db.execute(select(EsiUser).where(EsiUser.esi_id == esi_id))
         esi_user = result.scalars().first()
 
@@ -117,3 +100,17 @@ class EsiService:
 
         await self.db.commit()
         return esi_user
+
+    async def save_esi_token(self, esi_user_id: int, auth_token: dict) -> None:
+        expires_in_seconds = auth_token.get("expires_in", 0)
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in_seconds)
+
+        token = EsiToken(
+            esi_user_id=esi_user_id,
+            token_type=auth_token.get("token_type", "Bearer"),
+            token_value=auth_token.get("access_token"),
+            expires_in=expires_at,
+            refresh_token=auth_token.get("refresh_token", ""),
+        )
+        self.db.add(token)
+        await self.db.commit()
